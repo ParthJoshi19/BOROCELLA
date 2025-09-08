@@ -6,7 +6,7 @@ import * as THREE from "three";
 
 
 const Page = () => {
-  const bgVidPath = ["red-bg.mp4", "blue-bg(1).mp4"];
+  const bgVidPath = ["red-bg.mp4", "blue-bg.mp4"];
   const canModels=["red-can.glb","blue-can.glb"];
   const [current, setCurrent] = useState(0);
   const [previous, setPrevious] = useState<number | null>(null);
