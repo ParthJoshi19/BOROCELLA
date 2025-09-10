@@ -5,7 +5,6 @@ import { OrbitControls, useGLTF } from "@react-three/drei"
 import type * as THREE from "three"
 import { gsap } from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import LocomotiveScroll from 'locomotive-scroll'
 import 'locomotive-scroll/dist/locomotive-scroll.css'
 import { Suspense } from "react";
 
@@ -197,30 +196,33 @@ const Page = () => {
   const info = canInfo[current]
   const theme = themes[current]
 
- useEffect(() => {
-    if (typeof window === "undefined") return; // guard for SSR
-
+useEffect(() => {
     let scrollInstance: LocomotiveScroll | null = null;
 
-    const el = window.document.querySelector(
-      "[data-scroll-container]"
-    ) as HTMLElement | null;
+    const initScroll = async () => {
+      if (typeof window === "undefined") return;
 
-    if (el) {
-      scrollInstance = new LocomotiveScroll({
-        el,
-        smooth: true,
-        lerp: 0.08,
-        multiplier: 1,
-        class: "is-inview",
-      });
-    }
+      const LocomotiveScroll = (await import("locomotive-scroll")).default;
+
+      const el = document.querySelector(
+        "[data-scroll-container]"
+      ) as HTMLElement | null;
+
+      if (el) {
+        scrollInstance = new LocomotiveScroll({
+          el,
+          smooth: true,
+          lerp: 0.08,
+          multiplier: 1,
+          class: "is-inview",
+        });
+      }
+    };
+
+    initScroll();
 
     return () => {
-      if (scrollInstance) {
-        scrollInstance.destroy();
-        scrollInstance = null;
-      }
+      if (scrollInstance) scrollInstance.destroy();
     };
   }, []);
 
