@@ -1,3 +1,9 @@
 @import "tailwindcss";
 
 
+@font-face {
+  font-family: 'michroma';
+  src: url('/text/Michroma-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
