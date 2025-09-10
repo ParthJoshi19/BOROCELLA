@@ -141,7 +141,6 @@ const Page = () => {
   const [current, setCurrent] = useState(0)
   const [previous, setPrevious] = useState<number | null>(null)
   const [rotatespeed, setRotateSpeed] = useState(0.009)
-  const [currModel, setCurrModel] = useState(0)
   const [showInfo, setShowInfo] = useState(false) // mobile toggle
 
   function CanModel() {
@@ -182,7 +181,6 @@ const Page = () => {
     setTimeout(() => {
       setPrevious(null)
       setRotateSpeed(0.009)
-      setCurrModel(nextIndex)
     }, 800)
   }
 
