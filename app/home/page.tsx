@@ -14,6 +14,7 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger)
 }
 
+
 const canInfo = [
   {
     id: 0,
@@ -21,7 +22,7 @@ const canInfo = [
     tagline: "Bold Berry Boost",
     description:
       "Ignite your momentum with a vibrant fusion of dark berries and clean plant-based energy. Crafted to elevate focus and keep you moving—without the crash.",
-    highlights: ["Natural caffeine", "B‑vitamins complex", "Zero sugar"],
+    highlights: ["Natural caffeine", "B-vitamins complex", "Zero sugar"],
     stats: { caffeine: "120mg", calories: "10", sugar: "0g", size: "355ml" },
     accent: "from-rose-500/60 to-red-500/40",
   },
@@ -196,34 +197,46 @@ const Page = () => {
   const info = canInfo[current]
   const theme = themes[current]
 
-  useEffect(() => {
-    let scrollInstance: LocomotiveScroll | undefined
-    if (typeof window !== 'undefined') {
+ useEffect(() => {
+    if (typeof window === "undefined") return; // guard for SSR
+
+    let scrollInstance: LocomotiveScroll | null = null;
+
+    const el = window.document.querySelector(
+      "[data-scroll-container]"
+    ) as HTMLElement | null;
+
+    if (el) {
       scrollInstance = new LocomotiveScroll({
-        el: document.querySelector('[data-scroll-container]') as HTMLElement,
+        el,
         smooth: true,
         lerp: 0.08,
         multiplier: 1,
-        class: 'is-inview',
-      })
+        class: "is-inview",
+      });
     }
+
     return () => {
-      if (scrollInstance) scrollInstance.destroy()
-    }
-  }, [])
+      if (scrollInstance) {
+        scrollInstance.destroy();
+        scrollInstance = null;
+      }
+    };
+  }, []);
+
+  const cssVars: Record<string, string> = {
+  "--accent-primary": theme.primary,
+  "--accent-secondary": theme.secondary,
+  "--accent-glow": theme.glow,
+  "--accent-soft": theme.soft,
+  "--accent-ring": theme.ring,
+};
 
   return (
     <div
       data-scroll-container
       className="relative w-screen font-[michroma] overflow-hidden text-white"
-      style={{
-        ['--accent-primary' as any]: theme.primary,
-        ['--accent-secondary' as any]: theme.secondary,
-        ['--accent-glow' as any]: theme.glow,
-        ['--accent-soft' as any]: theme.soft,
-        ['--accent-ring' as any]: theme.ring,
-        transition: 'background-color 600ms, color 600ms',
-      }}
+      style={{ ...cssVars, transition: 'background-color 600ms, color 600ms' }}
     >
       <Navbar />
 
@@ -463,7 +476,7 @@ const Page = () => {
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">About EnergyBoost</h2>
             <p className="text-xl text-white/80 max-w-3xl mx-auto">
-              We're revolutionizing the energy drink industry with clean, sustainable ingredients and innovative flavors
+              We&apos;re revolutionizing the energy drink industry with clean, sustainable ingredients and innovative flavors
               that fuel your passion without compromise.
             </p>
           </div>
@@ -567,7 +580,7 @@ const Page = () => {
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">What Makes Us Different</h2>
             <p className="text-xl text-white/80">
-              We're not just another energy drink. Here's what sets EnergyBoost apart from the competition.
+              We&apos;re not just another energy drink. Here&apos;s what sets EnergyBoost apart from the competition.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
@@ -632,7 +645,7 @@ const Page = () => {
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Get In Touch</h2>
             <p className="text-xl text-white/80">
-              Have questions? Want to become a retailer? We'd love to hear from you.
+              Have questions? Want to become a retailer? We&apos;d love to hear from you.
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-12">
