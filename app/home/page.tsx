@@ -698,7 +698,7 @@ useEffect(() => {
             </div>
           </div>
         </div>
-        <div><span className="text-red-500">*</span>This Product is not Exist</div>
+        <div><span className="text-red-500">*</span>This Product dose not Exist</div>
       </section>
 
       <div aria-live="polite" className="sr-only">Showing {info.flavor} can variant</div>
