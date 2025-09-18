@@ -486,7 +486,7 @@ useEffect(() => {
             <div>
               <h3 className="text-2xl font-bold mb-4">Our Mission</h3>
               <p className="text-white/80 mb-6">
-                Founded in 2020, EnergyBoost was born from a simple belief: energy drinks should energize your body, not
+                Founded in 2025, EnergyBoost was born from a simple belief: energy drinks should energize your body, not
                 compromise your health. We use only natural caffeine sources, organic ingredients, and zero artificial
                 preservatives.
               </p>
