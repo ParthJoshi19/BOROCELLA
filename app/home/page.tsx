@@ -5,7 +5,6 @@ import { OrbitControls, useGLTF } from "@react-three/drei"
 import type * as THREE from "three"
 import { gsap } from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
-import 'locomotive-scroll/dist/locomotive-scroll.css'
 import { Suspense } from "react";
 
 // Register GSAP plugins
@@ -56,7 +55,7 @@ const themes: Record<number, { primary: string; secondary: string; glow: string;
 }
 
 const navItems = [
-  { name: "Home", href: "#home" },
+  { name: "Home", href: "#hero" },
   { name: "About Us", href: "#about" },
   { name: "Products", href: "#products" },
   { name: "Buy Product", href: "#buy" },
@@ -196,52 +195,178 @@ const Page = () => {
   const info = canInfo[current]
   const theme = themes[current]
 
-useEffect(() => {
-    let scrollInstance: LocomotiveScroll | null = null;
+  // SEO: dynamic title & meta with brand
+  useEffect(() => {
+    const title = `Borocelle | ${info.flavor} - Clean Energy Drink`
+    const description = `Borocelle ${info.flavor}: ${info.tagline}. ${info.description}`
 
-    const initScroll = async () => {
-      if (typeof window === "undefined") return;
+    document.title = title
 
-      const LocomotiveScroll = (await import("locomotive-scroll")).default;
-
-      const el = document.querySelector(
-        "[data-scroll-container]"
-      ) as HTMLElement | null;
-
-      if (el) {
-        scrollInstance = new LocomotiveScroll({
-          el,
-          smooth: true,
-          lerp: 0.08,
-          multiplier: 1,
-          class: "is-inview",
-        });
+    const setMeta = (key: "name" | "property", name: string, content: string) => {
+      let el = document.querySelector(`meta[${key}="${name}"]`) as HTMLMetaElement | null
+      if (!el) {
+        el = document.createElement("meta")
+        el.setAttribute(key, name)
+        document.head.appendChild(el)
       }
-    };
+      el.setAttribute("content", content)
+    }
 
-    initScroll();
+    setMeta("name", "description", description)
+    setMeta("property", "og:title", title)
+    setMeta("property", "og:description", description)
+    setMeta("property", "og:site_name", "Borocelle")
+    setMeta("name", "twitter:card", "summary_large_image")
+    setMeta("name", "twitter:title", title)
+    setMeta("name", "twitter:description", description)
+  }, [info])
+
+  // Replace Locomotive + scrollerProxy with pure GSAP ScrollTrigger
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const items = gsap.utils.toArray<HTMLElement>("[data-reveal]");
+      items.forEach((elem) => {
+        const dir = elem.dataset.reveal || "up";
+        const distance = Number(elem.dataset.revealDistance ?? 40);
+        const delay = Number(elem.dataset.revealDelay ?? 0);
+        const dur = Number(elem.dataset.revealDur ?? 0.8);
+        const ease = elem.dataset.revealEase ?? "power3.out";
+
+        let x = 0, y = 0, fromScale = elem.dataset.reveal === "scale" ? 0.96 : 1;
+        if (dir === "up") y = distance;
+        if (dir === "down") y = -distance;
+        if (dir === "left") x = distance;
+        if (dir === "right") x = -distance;
+
+        gsap.fromTo(
+          elem,
+          { opacity: 0, x, y, scale: fromScale },
+          {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            duration: dur,
+            delay,
+            ease,
+            clearProps: "all",
+            scrollTrigger: {
+              trigger: elem,
+              start: "top 80%",
+              toggleActions: "play none none reverse",
+            },
+          }
+        );
+      });
+    });
+
+    ScrollTrigger.refresh();
 
     return () => {
-      if (scrollInstance) scrollInstance.destroy();
+      ctx.revert();
+      ScrollTrigger.getAll().forEach((t) => t.kill());
+      ScrollTrigger.clearMatchMedia?.();
     };
   }, []);
 
   const cssVars: Record<string, string> = {
-  "--accent-primary": theme.primary,
-  "--accent-secondary": theme.secondary,
-  "--accent-glow": theme.glow,
-  "--accent-soft": theme.soft,
-  "--accent-ring": theme.ring,
-};
+    "--accent-primary": theme.primary,
+    "--accent-secondary": theme.secondary,
+    "--accent-glow": theme.glow,
+    "--accent-soft": theme.soft,
+    "--accent-ring": theme.ring,
+  };
 
   return (
     <div
-      data-scroll-container
-      className="relative w-screen font-[michroma] overflow-hidden text-white"
+      className="relative max-w-screen font-[michroma] overflow-hidden text-white "
       style={{ ...cssVars, transition: 'background-color 600ms, color 600ms' }}
     >
       <Navbar />
 
+      {/* JSON-LD Product schema with brand */}
+      <script
+        type="application/ld+json"
+        // Keep it simple and dynamic per selected can
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": `EnergyBoost ${info.flavor}`,
+            "brand": { "@type": "Brand", "name": "EnergyBoost" },
+            "description": info.description,
+            "offers": {
+              "@type": "Offer",
+              "price": "2.99",
+              "priceCurrency": "USD",
+              "availability": "https://schema.org/InStock"
+            }
+          })
+        }}
+      />
+      {/* ...existing code... */}
+
+      {/* HERO SECTION (new) */}
+      <section id="hero" className="relative min-h-[80vh] md:min-h-screen flex items-center justify-center px-4 py-24">
+        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-black via-gray-900 to-black" />
+        <div
+          className="absolute inset-0 -z-10 opacity-40 mix-blend-screen transition"
+          style={{
+            background: 'radial-gradient(60% 60% at 20% 30%, var(--accent-soft) 0%, rgba(0,0,0,0) 70%), radial-gradient(45% 45% at 80% 70%, var(--accent-soft) 0%, rgba(0,0,0,0) 70%)',
+          }}
+        />
+        <div className="max-w-5xl mx-auto text-center">
+          <h1
+            className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-white"
+            data-reveal="up"
+            data-reveal-distance="60"
+          >
+            Borocelle — Clean Energy. Zero Compromise.
+          </h1>
+          <p
+            className="text-lg md:text-xl text-white/85 max-w-3xl mx-auto mb-8"
+            data-reveal="up"
+            data-reveal-delay="0.1"
+          >
+            {info.tagline} — {info.description.split(".")[0]}.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4 mb-10" data-reveal="up" data-reveal-delay="0.2">
+            <a
+              href="#home"
+              className="px-6 py-3 rounded-full font-semibold text-black"
+              style={{ background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))', boxShadow: '0 6px 22px -8px var(--accent-glow)' }}
+            >
+              View 3D Can
+            </a>
+            <a
+              href="#products"
+              className="px-6 py-3 rounded-full font-semibold border"
+              style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'var(--accent-ring)', boxShadow: '0 0 0 1px var(--accent-soft)' }}
+            >
+              Explore Flavors
+            </a>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            {info.highlights.map((h, i) => (
+              <span
+                key={h}
+                className="px-3 py-1 rounded-full bg-white/10 text-xs md:text-sm backdrop-blur-sm border"
+                style={{ borderColor: 'var(--accent-ring)' }}
+                data-reveal="up"
+                data-reveal-delay={((i + 1) * 0.08).toString()}
+              >
+                {h}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Decorative soft glows */}
+        <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-white/20 blur-3xl opacity-20" />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 h-52 w-52 rounded-full bg-white/25 blur-3xl opacity-15" />
+      </section>
+
+      {/* HOME (unchanged below) */}
       <section id="home" className="relative min-h-screen w-screen overflow-hidden">
         {/* Background Video Current */}
         <video
@@ -285,6 +410,8 @@ useEffect(() => {
                 boxShadow: '0 0 0 1px var(--accent-soft), 0 4px 28px -6px var(--accent-glow), 0 0 60px -10px var(--accent-soft)',
                 transition: 'box-shadow 600ms',
               }}
+              data-reveal="up"
+              data-reveal-distance="80"
             >
               <div className="flex items-center justify-between px-4 pt-4 md:pt-5">
                 <h2 className="text-lg md:text-xl font-semibold tracking-wide uppercase">{info.flavor}</h2>
@@ -360,6 +487,8 @@ useEffect(() => {
             <div
               className={`col-span-12 md:col-span-5 flex flex-col gap-4 transition-all duration-500 ${showInfo ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0 md:max-h-none md:opacity-100"
                 } overflow-hidden md:overflow-visible`}
+              data-reveal="left"
+              data-reveal-distance="60"
             >
               <div
                 className={`relative rounded-2xl p-5 md:p-6 border border-white/20 shadow-xl backdrop-blur-lg`}
@@ -398,7 +527,7 @@ useEffect(() => {
                   <button
                     className="group relative px-5 py-2.5 rounded-full overflow-hidden font-semibold tracking-wide text-gray-900 transition"
                     style={{
-                      background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))',
+                      background: 'linear-gradient(135deg,var(--accent-primary),var(--accent-secondary))',
                       boxShadow: '0 4px 18px -4px var(--accent-glow)',
                     }}
                   >
@@ -476,14 +605,14 @@ useEffect(() => {
         />
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">About EnergyBoost</h2>
-            <p className="text-xl text-white/80 max-w-3xl mx-auto">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6" data-reveal="up">About EnergyBoost</h2>
+            <p className="text-xl text-white/80 max-w-3xl mx-auto" data-reveal="up" data-reveal-delay="0.1">
               We&apos;re revolutionizing the energy drink industry with clean, sustainable ingredients and innovative flavors
               that fuel your passion without compromise.
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
+            <div data-reveal="right" data-reveal-distance="60">
               <h3 className="text-2xl font-bold mb-4">Our Mission</h3>
               <p className="text-white/80 mb-6">
                 Founded in 2025, EnergyBoost was born from a simple belief: energy drinks should energize your body, not
@@ -505,7 +634,13 @@ useEffect(() => {
                 </div>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20" style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 8px 32px -10px var(--accent-glow)', transition: 'box-shadow 600ms' }}>
+            <div
+              className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20"
+              style={{ boxShadow: '0 0 0 1px var(--accent-soft), 0 8px 32px -10px var(--accent-glow)', transition: 'box-shadow 600ms' }}
+              data-reveal="left"
+              data-reveal-distance="60"
+              data-reveal-delay="0.1"
+            >
               <h4 className="text-xl font-bold mb-4">Our Values</h4>
               <ul className="space-y-3 text-white/80">
                 <li>• Transparency in every ingredient</li>
@@ -527,13 +662,13 @@ useEffect(() => {
         />
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Our Products</h2>
-            <p className="text-xl text-white/80">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6" data-reveal="up">Our Products</h2>
+            <p className="text-xl text-white/80" data-reveal="up" data-reveal-delay="0.1">
               Discover our range of premium energy drinks, each crafted for different moments and moods.
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-8">
-            {canInfo.map((product) => {
+            {canInfo.map((product, i) => {
               const active = product.id === current
               return (
                 <div
@@ -541,6 +676,8 @@ useEffect(() => {
                   className={`relative rounded-2xl p-8 border shadow-xl backdrop-blur-lg transition-transform duration-500 ${active ? 'scale-[1.02]' : 'hover:scale-[1.01]'} bg-gradient-to-br ${product.accent}`}
                   style={active ? { boxShadow: '0 0 0 1px var(--accent-soft), 0 12px 42px -10px var(--accent-glow), 0 0 60px -8px var(--accent-glow)', borderColor: 'var(--accent-primary)' } : { borderColor: 'rgba(255,255,255,0.25)' }}
                   onClick={() => setCurrent(product.id)}
+                  data-reveal="up"
+                  data-reveal-delay={(i * 0.1).toString()}
                 >
                   <h3 className="text-2xl font-bold mb-2">{product.flavor}</h3>
                   <p className="text-lg font-medium uppercase tracking-wider text-white/90 mb-4">{product.tagline}</p>
@@ -580,8 +717,8 @@ useEffect(() => {
         <div className="absolute inset-0 -z-10 opacity-30" style={{ background: 'radial-gradient(circle at 50% 50%, var(--accent-soft), transparent 60%)', transition: 'background 600ms' }} />
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">What Makes Us Different</h2>
-            <p className="text-xl text-white/80">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6" data-reveal="up">What Makes Us Different</h2>
+            <p className="text-xl text-white/80" data-reveal="up" data-reveal-delay="0.1">
               We&apos;re not just another energy drink. Here&apos;s what sets EnergyBoost apart from the competition.
             </p>
           </div>
@@ -589,7 +726,13 @@ useEffect(() => {
             {['100% Natural', 'Sustained Energy', 'Eco-Friendly'].map((title, i) => {
               const icons = ['🌱', '⚡', '🌍']
               return (
-                <div key={title} className="backdrop-blur-md rounded-2xl p-8 border text-center transition" style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'var(--accent-soft)', boxShadow: '0 0 0 1px var(--accent-soft), 0 8px 28px -8px var(--accent-glow)' }}>
+                <div
+                  key={title}
+                  className="backdrop-blur-md rounded-2xl p-8 border text-center transition"
+                  style={{ background: 'rgba(255,255,255,0.08)', borderColor: 'var(--accent-soft)', boxShadow: '0 0 0 1px var(--accent-soft), 0 8px 28px -8px var(--accent-glow)' }}
+                  data-reveal="up"
+                  data-reveal-delay={(i * 0.1).toString()}
+                >
                   <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl" style={{ background: 'linear-gradient(135deg,var(--accent-primary),var(--accent-secondary))', boxShadow: '0 0 0 4px var(--accent-soft)' }}>{icons[i]}</div>
                   <h3 className="text-xl font-bold mb-4">{title}</h3>
                   {/* ...existing description mapping retained below original; kept semantic minimal change */}
@@ -608,15 +751,22 @@ useEffect(() => {
         <div className="absolute inset-0 -z-10 bg-gradient-to-br from-black to-gray-900" />
         <div className="absolute inset-0 -z-10 opacity-35" style={{ background: 'radial-gradient(circle at 30% 70%, var(--accent-soft), transparent 60%)' }} />
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Boost Your Energy?</h2>
-          <p className="text-xl text-white/80 mb-12">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6" data-reveal="up">Ready to Boost Your Energy?</h2>
+          <p className="text-xl text-white/80 mb-12" data-reveal="up" data-reveal-delay="0.1">
             Choose your flavor and experience the difference of clean, natural energy.
           </p>
           <div className="grid md:grid-cols-2 gap-8 mb-12">
-            {canInfo.map((product) => {
+            {canInfo.map((product, i) => {
               const active = product.id === current
               return (
-                <div key={product.id} className="backdrop-blur-md rounded-2xl p-8 border transition" style={active ? { background: 'linear-gradient(135deg,var(--accent-soft),rgba(255,255,255,0.12))', borderColor: 'var(--accent-primary)', boxShadow: '0 0 0 1px var(--accent-soft), 0 10px 36px -10px var(--accent-glow)' } : { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)' }} onClick={() => setCurrent(product.id)}>
+                <div
+                  key={product.id}
+                  className="backdrop-blur-md rounded-2xl p-8 border transition"
+                  style={active ? { background: 'linear-gradient(135deg,var(--accent-soft),rgba(255,255,255,0.12))', borderColor: 'var(--accent-primary)', boxShadow: '0 0 0 1px var(--accent-soft), 0 10px 36px -10px var(--accent-glow)' } : { background: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)' }}
+                  onClick={() => setCurrent(product.id)}
+                  data-reveal="up"
+                  data-reveal-delay={(i * 0.1).toString()}
+                >
                   <h3 className="text-2xl font-bold mb-4">{product.flavor}</h3>
                   <p className="text-white/80 mb-6">{product.tagline}</p>
                   <div className="text-3xl font-bold mb-6 bg-clip-text text-transparent" style={{ background: 'linear-gradient(90deg,var(--accent-primary),var(--accent-secondary))' }}>$2.99</div>
@@ -625,7 +775,12 @@ useEffect(() => {
               )
             })}
           </div>
-          <div className="backdrop-blur-md rounded-2xl p-8 border" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'var(--accent-soft)', boxShadow: '0 0 0 1px var(--accent-soft)' }}>
+          <div
+            className="backdrop-blur-md rounded-2xl p-8 border"
+            style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'var(--accent-soft)', boxShadow: '0 0 0 1px var(--accent-soft)' }}
+            data-reveal="up"
+            data-reveal-delay="0.2"
+          >
             <h3 className="text-2xl font-bold mb-4">Bulk Orders</h3>
             <p className="text-white/80 mb-6">
               Save more with our bulk packages. Perfect for offices, gyms, and events.
@@ -645,13 +800,13 @@ useEffect(() => {
         <div className="absolute inset-0 -z-10 opacity-30" style={{ background: 'radial-gradient(circle at 55% 45%, var(--accent-soft), transparent 60%)' }} />
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Get In Touch</h2>
-            <p className="text-xl text-white/80">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6" data-reveal="up">Get In Touch</h2>
+            <p className="text-xl text-white/80" data-reveal="up" data-reveal-delay="0.1">
               Have questions? Want to become a retailer? We&apos;d love to hear from you.
             </p>
           </div>
           <div className="grid md:grid-cols-2 gap-12">
-            <div>
+            <div data-reveal="right" data-reveal-distance="60">
               <h3 className="text-2xl font-bold mb-6">Contact Information</h3>
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
@@ -687,7 +842,13 @@ useEffect(() => {
                 </div>
               </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border" style={{ borderColor: 'var(--accent-soft)', boxShadow: '0 0 0 1px var(--accent-soft), 0 6px 24px -8px var(--accent-glow)', transition: 'box-shadow 600ms' }}>
+            <div
+              className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border"
+              style={{ borderColor: 'var(--accent-soft)', boxShadow: '0 0 0 1px var(--accent-soft), 0 6px 24px -8px var(--accent-glow)', transition: 'box-shadow 600ms' }}
+              data-reveal="left"
+              data-reveal-distance="60"
+              data-reveal-delay="0.1"
+            >
               <h3 className="text-xl font-bold mb-6">Send us a message</h3>
               <form className="space-y-4">
                 <input type="text" placeholder="Your Name" className="w-full px-4 py-3 bg-white/10 border rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2" style={{ borderColor: 'var(--accent-ring)', boxShadow: '0 0 0 1px var(--accent-soft)' }} />
