@@ -1,7 +1,7 @@
 "use client"
 import { useRef, useState, useEffect } from "react"
 import { Canvas, useFrame } from "@react-three/fiber"
-import { OrbitControls, useGLTF } from "@react-three/drei"
+import { OrbitControls, useGLTF, useProgress } from "@react-three/drei"
 import type * as THREE from "three"
 import { gsap } from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
@@ -195,6 +195,58 @@ const Page = () => {
   const info = canInfo[current]
   const theme = themes[current]
 
+  // Themed loader wiring
+  const { progress, active } = useProgress()
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const loaderRef = useRef<HTMLDivElement>(null)
+  const startRef = useRef<number>(0)
+  const [videoReady, setVideoReady] = useState(false)
+  const [showLoader, setShowLoader] = useState(true)
+
+  useEffect(() => {
+    startRef.current = performance.now()
+  }, [])
+
+  // Hide loader when both 3D assets and current bg video are ready (with a short min display)
+  useEffect(() => {
+    if (!active && videoReady && showLoader) {
+      const elapsed = performance.now() - startRef.current
+      const minShowMs = 500
+      const delay = Math.max(0, minShowMs - elapsed)
+      const t = setTimeout(() => {
+        if (!loaderRef.current) return
+        gsap.to(loaderRef.current, {
+          opacity: 0,
+          duration: 0.5,
+          ease: "power2.out",
+          onComplete: () => {
+            setShowLoader(false)
+            ScrollTrigger.refresh()
+          },
+        })
+      }, delay)
+      return () => clearTimeout(t)
+    }
+  }, [active, videoReady, showLoader])
+
+  // Fallback timeout: never block more than ~4s
+  useEffect(() => {
+    if (!showLoader) return
+    const t = setTimeout(() => {
+      if (!loaderRef.current) return
+      gsap.to(loaderRef.current, {
+        opacity: 0,
+        duration: 0.5,
+        ease: "power2.out",
+        onComplete: () => {
+          setShowLoader(false)
+          ScrollTrigger.refresh()
+        },
+      })
+    }, 4000)
+    return () => clearTimeout(t)
+  }, [showLoader])
+
   // SEO: dynamic title & meta with brand
   useEffect(() => {
     const title = `Borocelle | ${info.flavor} - Clean Energy Drink`
@@ -267,7 +319,7 @@ const Page = () => {
       ScrollTrigger.getAll().forEach((t) => t.kill());
       ScrollTrigger.clearMatchMedia?.();
     };
-  }, []);
+  }, [showLoader]);
 
   const cssVars: Record<string, string> = {
     "--accent-primary": theme.primary,
@@ -277,11 +329,50 @@ const Page = () => {
     "--accent-ring": theme.ring,
   };
 
+  const combinedProgress = Math.round(0.8 * progress + 0.2 * (videoReady ? 100 : 0))
+
   return (
     <div
       className="relative max-w-screen font-[michroma] overflow-hidden text-white "
       style={{ ...cssVars, transition: 'background-color 600ms, color 600ms' }}
+      aria-busy={showLoader ? "true" : "false"}
     >
+      {/* Themed Loader Overlay */}
+      {showLoader && (
+        <div ref={loaderRef} className="fixed inset-0 z-[999] flex items-center justify-center">
+          <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black" />
+          <div
+            className="absolute inset-0 pointer-events-none opacity-60"
+            style={{ background: 'radial-gradient(55% 55% at 50% 50%, var(--accent-soft), rgba(0,0,0,0) 70%)', filter: 'blur(20px)' }}
+          />
+          <div className="relative z-10 text-center px-6">
+            <div
+              className="mx-auto mb-6 h-14 w-14 rounded-full border-2 animate-spin"
+              style={{ borderColor: 'rgba(255,255,255,0.18)', borderTopColor: 'var(--accent-primary)' }}
+              aria-hidden
+            />
+            <div className="text-xl md:text-2xl font-semibold mb-2">
+              BOROCELLE is loading...
+            </div>
+            <div className="text-white/70 text-sm md:text-base mb-4">
+              Preparing {info.flavor}
+            </div>
+            <div className="mx-auto w-64 max-w-[70vw] h-2 bg-white/10 rounded-full overflow-hidden border border-white/10">
+              <div
+                className="h-full"
+                style={{
+                  width: `${combinedProgress}%`,
+                  background: 'linear-gradient(90deg,var(--accent-primary),var(--accent-secondary))',
+                  transition: 'width 200ms ease',
+                }}
+                aria-label="Loading progress"
+              />
+            </div>
+            <div className="mt-2 text-white/70 text-xs">{combinedProgress}%</div>
+          </div>
+        </div>
+      )}
+
       <Navbar />
 
       {/* JSON-LD Product schema with brand */}
@@ -304,9 +395,8 @@ const Page = () => {
           })
         }}
       />
-      {/* ...existing code... */}
 
-      {/* HERO SECTION (new) */}
+      {/* HERO SECTION (ensure hidden until loader finishes so reveal plays after) */}
       <section id="hero" className="relative min-h-[80vh] md:min-h-screen flex items-center justify-center px-4 py-24">
         <div className="absolute inset-0 -z-10 bg-gradient-to-br from-black via-gray-900 to-black" />
         <div
@@ -320,6 +410,7 @@ const Page = () => {
             className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-white"
             data-reveal="up"
             data-reveal-distance="60"
+            style={{ opacity: showLoader ? 0 : undefined }}
           >
             Borocelle — Clean Energy. Zero Compromise.
           </h1>
@@ -327,10 +418,16 @@ const Page = () => {
             className="text-lg md:text-xl text-white/85 max-w-3xl mx-auto mb-8"
             data-reveal="up"
             data-reveal-delay="0.1"
+            style={{ opacity: showLoader ? 0 : undefined }}
           >
             {info.tagline} — {info.description.split(".")[0]}.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 mb-10" data-reveal="up" data-reveal-delay="0.2">
+          <div
+            className="flex flex-wrap items-center justify-center gap-4 mb-10"
+            data-reveal="up"
+            data-reveal-delay="0.2"
+            style={{ opacity: showLoader ? 0 : undefined }}
+          >
             <a
               href="#home"
               className="px-6 py-3 rounded-full font-semibold text-black"
@@ -351,7 +448,7 @@ const Page = () => {
               <span
                 key={h}
                 className="px-3 py-1 rounded-full bg-white/10 text-xs md:text-sm backdrop-blur-sm border"
-                style={{ borderColor: 'var(--accent-ring)' }}
+                style={{ borderColor: 'var(--accent-ring)', opacity: showLoader ? 0 : undefined }}
                 data-reveal="up"
                 data-reveal-delay={((i + 1) * 0.08).toString()}
               >
@@ -370,6 +467,9 @@ const Page = () => {
       <section id="home" className="relative min-h-screen w-screen overflow-hidden">
         {/* Background Video Current */}
         <video
+          ref={videoRef}
+          onCanPlayThrough={() => setVideoReady(true)}
+          onLoadedData={() => setVideoReady(true)}
           key={current}
           src={`/bg-videos/${bgVidPath[current]}`}
           autoPlay
