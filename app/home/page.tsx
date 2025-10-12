@@ -275,6 +275,7 @@ const Page = () => {
 
   // Replace Locomotive + scrollerProxy with pure GSAP ScrollTrigger
   useEffect(() => {
+    if (showLoader) return
     const ctx = gsap.context(() => {
       const items = gsap.utils.toArray<HTMLElement>("[data-reveal]");
       items.forEach((elem) => {
@@ -284,7 +285,9 @@ const Page = () => {
         const dur = Number(elem.dataset.revealDur ?? 0.8);
         const ease = elem.dataset.revealEase ?? "power3.out";
 
-        let x = 0, y = 0, fromScale = elem.dataset.reveal === "scale" ? 0.96 : 1;
+        let x = 0, y = 0;
+        const fromScale = elem.dataset.reveal === "scale" ? 0.96 : 1;
+
         if (dir === "up") y = distance;
         if (dir === "down") y = -distance;
         if (dir === "left") x = distance;
